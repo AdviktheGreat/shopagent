@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Shopagent · Your shopping sidekick</title>
+    <link rel="stylesheet" href="panel.css" />
+    <script type="module" src="panel.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="header">
+        <a class="brand" href="#" aria-label="Shopagent home"
+          ><span class="brand-mark" aria-hidden="true">✳</span
+          ><span>shopagent<span class="beta">EARLY ACCESS</span></span></a
+        >
+        <button
+          class="icon-button"
+          id="settings-button"
+          aria-label="Privacy and settings"
+          title="Privacy and settings"
+        ></button>
+      </header>
+      <section class="store-bar" aria-label="Current shopping context">
+        <span class="store-icon" id="store-icon" aria-hidden="true"></span>
+        <div class="store-copy">
+          <span class="eyebrow" id="store-label">A LITTLE INSPIRATION</span
+          ><strong id="store-name">The demo edit</strong>
+        </div>
+        <button class="small-button" id="scan-button">Read this page</button>
+      </section>
+      <nav class="tabs" role="tablist" aria-label="Shopping views">
+        <button
+          class="tab active"
+          id="tab-discover"
+          role="tab"
+          aria-controls="main"
+          aria-selected="true"
+          data-tab="discover"
+        >
+          For you
+        </button>
+        <button
+          class="tab"
+          id="tab-saved"
+          role="tab"
+          aria-controls="main"
+          aria-selected="false"
+          tabindex="-1"
+          data-tab="saved"
+        >
+          Saved <span id="saved-count" class="count">0</span>
+        </button>
+        <button
+          class="tab"
+          id="tab-profile"
+          role="tab"
+          aria-controls="main"
+          aria-selected="false"
+          tabindex="-1"
+          data-tab="profile"
+        >
+          Your taste
+        </button>
+      </nav>
+      <main
+        id="main"
+        role="tabpanel"
+        aria-labelledby="tab-discover"
+        tabindex="0"
+      ></main>
+      <section class="stylist" aria-label="Your stylist conversation">
+        <div class="stylist-heading">
+          <span
+            ><span class="mini-spark" aria-hidden="true">✳</span> Your sidekick
+            <span class="local-pill">LOCAL PROTOTYPE</span></span
+          ><button
+            class="text-button"
+            id="conversation-button"
+            aria-expanded="false"
+          >
+            History
+          </button>
+        </div>
+        <div
+          id="messages"
+          class="messages"
+          role="log"
+          aria-label="Conversation"
+          aria-live="polite"
+        ></div>
+        <div class="quick-prompts" id="quick-prompts">
+          <button data-prompt="More fitted">More fitted <span>↗</span></button>
+          <button data-prompt="Under $150">Under $150 <span>↗</span></button>
+          <button data-prompt="For work">For work <span>↗</span></button>
+        </div>
+        <form id="chat-form" class="composer">
+          <label class="sr-only" for="chat-input"
+            >Tell your sidekick what you need</label
+          ><input
+            id="chat-input"
+            autocomplete="off"
+            maxlength="500"
+            placeholder="A little more you. What are we looking for?"
+          /><button class="send-button" type="submit" aria-label="Send message">
+            ↑
+          </button>
+        </form>
+        <p class="local-note">On-device memory · No account needed</p>
+      </section>
+    </div>
+    <div id="toast" class="toast" role="status" hidden></div>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button class="icon-button" id="close-modal" aria-label="Close dialog">
+          ×
+        </button>
+      </div>
+      <div id="modal-content"></div>
+    </dialog>
+  </body>
+</html>

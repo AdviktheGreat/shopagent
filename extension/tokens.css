@@ -1,0 +1,9 @@
+:root {
+  --paper: #faf9f4;
+  --ink: #30372a;
+  --muted: #838576;
+  --coral: #c97051;
+  --line: #e4e3d8;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
