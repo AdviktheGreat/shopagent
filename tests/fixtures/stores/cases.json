@@ -1,0 +1,30 @@
+{
+  "observedDate": "2026-11-01",
+  "note": "Reduced public markup plus explicitly labeled synthetic edge cases; not current inventory.",
+  "cases": [
+    {
+      "id": "everlane-product",
+      "url": "https://www.everlane.com/products/womens-relaxed-linen-shirt-light-blue",
+      "fixture": "everlane/product.html",
+      "expected": {
+        "count": 1,
+        "title": "The Must-Have Shirt in Linen | Light Blue",
+        "price": 88,
+        "currency": "USD",
+        "imageRequired": true
+      }
+    },
+    {
+      "id": "everlane-collection",
+      "url": "https://www.everlane.com/collections/womens-tops",
+      "fixture": "everlane/collection.html",
+      "expected": {
+        "count": 2,
+        "title": "Flannel Shirt",
+        "price": 98,
+        "currency": "USD",
+        "imageRequired": true
+      }
+    }
+  ]
+}
