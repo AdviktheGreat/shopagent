@@ -8,6 +8,7 @@ import {
   money,
   safeUrl,
   stockLabel,
+  canonicalUrl,
 } from "./core.js";
 import { DEMO_PRODUCTS, garmentArt } from "./demo.js";
 
@@ -42,6 +43,10 @@ let activeTab = null;
 let expanded = false;
 let busy = false;
 let scanVersion = 0;
+let contextVersion = 0;
+let observationVersion = 0;
+let observation = null;
+let refreshPending = false;
 let notice = "";
 let selection = new Set();
 let toastTimeout;
@@ -51,10 +56,13 @@ let draftStyles;
 async function request(action) {
   if (isExtension) {
     const response = await chrome.runtime.sendMessage(action);
-    if (!response?.ok)
-      throw new Error(
+    if (!response?.ok) {
+      const error = new Error(
         response?.error || "Shopagent could not complete that action.",
       );
+      error.code = response?.code;
+      throw error;
+    }
     return response.data;
   }
   if (action.type === "READ") {
@@ -110,6 +118,14 @@ async function request(action) {
   return state;
 }
 async function mutate(action) {
+  if (
+    action.type === "RESET" ||
+    (action.type === "PROFILE" && action.profile.learning === false)
+  ) {
+    stopObservation();
+    scanVersion++;
+    busy = false;
+  }
   state = await request(action);
   selection = new Set(
     [...selection].filter((id) => state.saved.some((p) => p.id === id)),
@@ -341,7 +357,61 @@ function originPattern(url) {
     return "";
   }
 }
-async function scanPage(manual = true) {
+function stopObservation() {
+  observationVersion++;
+  refreshPending = false;
+  const previous = observation;
+  observation = null;
+  try {
+    previous?.port.disconnect();
+  } catch {}
+}
+async function startObservation(target) {
+  if (
+    !isExtension ||
+    !state.profile.learning ||
+    demo ||
+    !target ||
+    target.id !== activeTab?.id
+  )
+    return;
+  if (observation?.tabId === target.id) return;
+  const version = ++observationVersion;
+  const result = await request({ type: "OBSERVE", tabId: target.id });
+  if (
+    !result.watching ||
+    version !== observationVersion ||
+    target.id !== activeTab?.id ||
+    !state.profile.learning ||
+    demo
+  )
+    return;
+  const port = chrome.tabs.connect(target.id, {
+    name: "shopagent-observe-v1",
+    frameId: 0,
+  });
+  observation = { port, tabId: target.id };
+  port.onDisconnect.addListener(() => {
+    void chrome.runtime.lastError;
+    if (observation?.port === port) observation = null;
+  });
+  port.onMessage.addListener((message) => {
+    if (
+      message.type !== "PAGE_CHANGED" ||
+      observation?.port !== port ||
+      !state.profile.learning ||
+      demo ||
+      activeTab?.id !== target.id
+    )
+      return;
+    if (canonicalUrl(message.url) !== canonicalUrl(activeTab.url)) {
+      followTab().catch((error) => toast(error.message));
+    } else if (busy) refreshPending = true;
+    else
+      scanPage(false, { refresh: true }).catch((error) => toast(error.message));
+  });
+}
+async function scanPage(manual = true, { refresh = false } = {}) {
   if (!isExtension) {
     toast(
       "Load the extension in Chrome to read real store pages. The demo works here.",
@@ -372,33 +442,58 @@ async function scanPage(manual = true) {
     busy = true;
     demo = false;
     notice = "";
-    page = null;
-    if (manual) setTab("discover");
+    if (!refresh) page = null;
+    if (refresh) renderContext();
+    else if (manual) setTab("discover");
     else if (tab === "discover") renderMain();
     else renderContext();
-    const result = await request({ type: "SCAN", tabId: target.id });
+    const result = await request({
+      type: "SCAN",
+      tabId: target.id,
+      expectedUrl: target.url,
+    });
     if (version !== scanVersion) return;
+    const updatedState = await request({ type: "READ" });
+    if (version !== scanVersion) return;
+    state = updatedState;
     page = result;
-    state = await request({ type: "READ" });
     notice = page.products.length
       ? ""
       : "No products found yet. Try a product detail page, scroll to load the collection, or refresh picks. Coverage varies by store.";
+    try {
+      await startObservation(target);
+    } catch {
+      notice =
+        "Automatic refresh is unavailable on this page. Use Refresh picks to update its snapshot.";
+    }
   } catch (error) {
     if (version !== scanVersion) return;
-    page = null;
-    notice = `Could not read this page. ${error.message}`;
+    if (!refresh || error.code === "STALE_PAGE") page = null;
+    notice = `Could not ${refresh ? "refresh this page; the previous snapshot may be out of date" : "read this page"}. ${error.message}`;
   } finally {
     if (version === scanVersion) {
       busy = false;
       if (tab === "discover") renderMain();
       else renderContext();
+      if (refreshPending && state.profile.learning && !demo) {
+        refreshPending = false;
+        queueMicrotask(() =>
+          scanPage(false, { refresh: true }).catch((error) =>
+            toast(error.message),
+          ),
+        );
+      }
     }
   }
 }
 async function followTab() {
-  activeTab = await currentTab();
+  const version = ++contextVersion;
+  stopObservation();
   scanVersion++;
   busy = false;
+  const next = await currentTab();
+  if (version !== contextVersion) return;
+  activeTab = next;
   if (
     state.profile.learning &&
     originPattern(activeTab?.url) &&
@@ -449,6 +544,7 @@ async function runAction(action) {
       await scanPage();
       break;
     case "demo":
+      stopObservation();
       scanVersion++;
       busy = false;
       demo = true;
@@ -565,6 +661,7 @@ document.addEventListener("click", async (event) => {
       toast("Inspiration removed.");
     }
     if (button.dataset.revoke) {
+      stopObservation();
       await chrome.permissions.remove({ origins: [button.dataset.revoke] });
       page = null;
       scanVersion++;
@@ -647,6 +744,7 @@ document.addEventListener("submit", async (event) => {
     setTab("discover");
     renderMessages();
     toast("Your preferences are saved. Let’s find your kind of pieces.");
+    if (state.profile.learning && !demo) await startObservation(activeTab);
   } catch (error) {
     toast(error.message);
   }
@@ -709,14 +807,38 @@ async function init() {
       followTab().catch((error) => toast(error.message)),
     );
     chrome.tabs.onUpdated.addListener((id, info) => {
+      if (id === activeTab?.id && info.status === "loading") {
+        stopObservation();
+        scanVersion++;
+        busy = false;
+        page = null;
+        notice =
+          "The store page is loading. Picks will refresh when it is ready.";
+        if (!demo && tab === "discover") renderMain();
+      }
       if (id === activeTab?.id && (info.status === "complete" || info.url))
         followTab().catch((error) => toast(error.message));
     });
     chrome.storage.onChanged.addListener(async (changes) => {
       if (!changes.shopagent) return;
       state = hydrateState(changes.shopagent.newValue);
+      if (!state.profile.learning) {
+        stopObservation();
+        scanVersion++;
+        busy = false;
+      }
       $("#saved-count").textContent = state.saved.length;
     });
+    chrome.permissions.onRemoved.addListener(() => {
+      stopObservation();
+      scanVersion++;
+      busy = false;
+      page = null;
+      notice =
+        "Site access changed. Choose Read this page to authorize reading again.";
+      if (!demo && tab === "discover") renderMain();
+    });
+    window.addEventListener("pagehide", stopObservation);
     await followTab();
   }
 }

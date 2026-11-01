@@ -52,6 +52,7 @@ Chrome extensions are packaged HTML, CSS, and JavaScript described by `manifest.
 - **`extension/background.js`**: Chrome's event-driven service worker. It handles storage changes through a serialized queue and injects the page reader after permission is granted. Durable state lives in `chrome.storage.local`, so the service worker can shut down without losing it.
 - **`extension/extractor.js`** and **`extension/adapters/`**: content scripts in Chrome's isolated world. Read product markup, common visible product cards, and explicitly identified product-option controls. They do not collect arbitrary inputs, cookies, login information, address/payment fields, or full page bodies.
 - **`extension/core.js`**: pure ranking, filter parsing, URL validation, and data helpers. This is the natural boundary for adding a real recommendation service later.
+- **`extension/page-observer.js`**: follows product markup and option changes only while a panel is connected to the active, authorized tab. Disconnecting the panel stops its DOM observer and URL check. Updates are coalesced; unchanged product facts do not rewrite history.
 - **`extension/demo.js`**: fictional sample products and self-contained garment illustrations.
 
 There are no remote scripts, runtime dependencies, API calls, or developer backend. Product images can load from the retailer's image hosts; those hosts receive ordinary image requests without a referrer. Moodboard images stay local.

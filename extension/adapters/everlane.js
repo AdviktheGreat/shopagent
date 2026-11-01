@@ -140,6 +140,8 @@
       });
       return { handled: true, adapter: "everlane", pageType: "product" };
     }
+    if (groups.length && location.pathname.startsWith("/products/"))
+      return { handled: true, adapter: "everlane", pageType: "loading" };
     const cards = [
       ...document.querySelectorAll("main .blm-product-search__result"),
     ].slice(0, 120);

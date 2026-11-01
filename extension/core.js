@@ -306,3 +306,16 @@ export function mergeProducts(previous, incoming, limit = 150) {
   for (const p of incoming) map.set(p.id, { ...map.get(p.id), ...p });
   return [...map.values()].slice(-limit);
 }
+
+export function productSignature(product) {
+  const { capturedAt, seenAt, savedAt, score, reasons, ...facts } = product;
+  return JSON.stringify(facts, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, value[key]]),
+        )
+      : value,
+  );
+}

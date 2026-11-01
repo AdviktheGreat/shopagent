@@ -341,6 +341,104 @@ try {
   passed(
     "Native content-script injection, automatic tab following, safe rendering, and live saves work end to end",
   );
+  const observerCount = () =>
+    integration.worker.evaluate(async (tabId) => {
+      const result = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => globalThis.ShopagentPageObserver?.connected || 0,
+      });
+      return result[0].result;
+    }, liveTab);
+  await expect.poll(observerCount).toBe(1);
+  const storefront = integration.context
+    .pages()
+    .find((p) => p.url() === `${origin}/fixtures/product.html`);
+  assert.ok(storefront);
+  await storefront.evaluate(() => {
+    const script = document.querySelector('script[type="application/ld+json"]');
+    const data = JSON.parse(script.textContent);
+    data["@graph"][0].offers.price = "119.00";
+    script.textContent = JSON.stringify(data);
+  });
+  await expect(livePanel.locator(".product-price")).toContainText("$119.00");
+  await storefront.evaluate(() => {
+    history.pushState({}, "", "/fixtures/product.html?color=navy");
+    const script = document.querySelector('script[type="application/ld+json"]');
+    const data = JSON.parse(script.textContent);
+    data["@graph"][0].offers.price = "111.00";
+    script.textContent = JSON.stringify(data);
+  });
+  await expect(livePanel.locator(".product-price")).toContainText("$111.00");
+  const stale = await livePanel.evaluate(
+    (tabId) =>
+      chrome.runtime.sendMessage({
+        type: "SCAN",
+        tabId,
+        expectedUrl: "https://wrong.example/old-page",
+      }),
+    liveTab,
+  );
+  assert.equal(stale.code, "STALE_PAGE");
+  passed(
+    "Product mutations and pushState refresh picks; obsolete page requests are rejected",
+  );
+  await storefront.goto(`${origin}/fixtures/collection.html`);
+  await expect(livePanel.locator(".product-card")).toHaveCount(3);
+  await expect.poll(observerCount).toBe(1);
+  await storefront.evaluate(() => {
+    const next = document.querySelector(".product-card").cloneNode(true);
+    next.querySelector("a").href = "/products/dynamically-loaded";
+    next.querySelector("h2").textContent = "Dynamically loaded shirt";
+    next.querySelector(".price").textContent = "USD 59.00";
+    document.querySelector(".grid").append(next);
+  });
+  await expect(livePanel.locator(".product-card")).toHaveCount(4);
+  await livePanel.reload();
+  await expect(livePanel.locator(".product-card")).toHaveCount(4);
+  await expect.poll(observerCount).toBe(1);
+  const beforeUnchanged = await integration.worker.evaluate(async () =>
+    JSON.stringify(
+      (await chrome.storage.local.get("shopagent")).shopagent.history,
+    ),
+  );
+  await livePanel.evaluate(
+    (tabId) => chrome.runtime.sendMessage({ type: "SCAN", tabId }),
+    liveTab,
+  );
+  const afterUnchanged = await integration.worker.evaluate(async () =>
+    JSON.stringify(
+      (await chrome.storage.local.get("shopagent")).shopagent.history,
+    ),
+  );
+  assert.equal(
+    afterUnchanged,
+    beforeUnchanged,
+    "Unchanged automatic/manual scans do not rewrite browsing memory",
+  );
+  passed(
+    "Dynamically appended cards appear once; panel reloads keep one observer and stable memory",
+  );
+  const inactiveTab = await integration.worker.evaluate(
+    async () => (await chrome.tabs.create({ url: "about:blank" })).id,
+  );
+  await expect.poll(observerCount).toBe(0);
+  await integration.worker.evaluate(
+    (id) => chrome.tabs.update(id, { active: true }),
+    liveTab,
+  );
+  await expect.poll(observerCount).toBe(1);
+  await livePanel.goto("about:blank");
+  await expect.poll(observerCount).toBe(0);
+  await livePanel.goto(`chrome-extension://${integration.id}/panel.html`);
+  await expect(livePanel.locator(".product-card")).toHaveCount(4);
+  await expect.poll(observerCount).toBe(1);
+  await integration.worker.evaluate(
+    (id) => chrome.tabs.remove(id),
+    inactiveTab,
+  );
+  passed(
+    "Switching away and leaving the panel disconnect observers; returning attaches exactly once",
+  );
 
   await integration.worker.evaluate(
     async (tabId) => chrome.tabs.update(tabId, { url: "https://example.org/" }),
@@ -373,6 +471,7 @@ try {
     liveTab,
   );
   assert.equal(direct.ok, true);
+  await expect.poll(observerCount).toBe(0);
   assert.equal(
     await integration.worker.evaluate(
       async () =>

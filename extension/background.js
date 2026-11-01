@@ -1,4 +1,10 @@
-import { freshState, hydrateState, mergeProducts } from "./core.js";
+import {
+  freshState,
+  hydrateState,
+  mergeProducts,
+  canonicalUrl,
+  productSignature,
+} from "./core.js";
 import { EXTRACTION_FILES } from "./reader-files.js";
 
 let queue = Promise.resolve();
@@ -73,9 +79,18 @@ async function updateState(action) {
   });
 }
 
-async function scan(tabId) {
+function stalePage() {
+  const error = new Error(
+    "The page changed while reading. Refresh picks to read the new page.",
+  );
+  error.code = "STALE_PAGE";
+  return error;
+}
+async function scan(tabId, expectedUrl) {
   const initial = await readState();
   const tab = await chrome.tabs.get(tabId);
+  if (expectedUrl && canonicalUrl(tab.url) !== canonicalUrl(expectedUrl))
+    throw stalePage();
   if (!/^https?:\/\//.test(tab.url || ""))
     throw new Error(
       "Open a clothing store in a regular web tab, then try again. Chrome internal pages and the Web Store cannot be read.",
@@ -90,19 +105,62 @@ async function scan(tabId) {
       "This page could not be read. Refresh the store page and try again.",
     );
   await serial(async () => {
+    const currentTab = await chrome.tabs.get(tabId);
+    if (
+      canonicalUrl(currentTab.url) !== canonicalUrl(tab.url) ||
+      page.url !== canonicalUrl(currentTab.url)
+    )
+      throw stalePage();
     const state = await readState();
     if (state.profile.learning && state.historyEpoch === initial.historyEpoch) {
+      if (
+        !(await chrome.permissions.contains({
+          origins: [`${new URL(currentTab.url).origin}/*`],
+        }))
+      )
+        return;
+      const prior = new Map(
+        state.history.map((product) => [product.id, product]),
+      );
+      const changed = page.products.filter(
+        (product) =>
+          !product.demo &&
+          (!prior.has(product.id) ||
+            productSignature(prior.get(product.id)) !==
+              productSignature({ ...prior.get(product.id), ...product })),
+      );
+      if (!changed.length) return;
       state.history = mergeProducts(
         state.history,
-        page.products
-          .filter((p) => !p.demo)
-          .map((p) => ({ ...p, seenAt: Date.now() })),
+        changed.map((p) => ({ ...p, seenAt: Date.now() })),
         150,
       );
       await chrome.storage.local.set({ shopagent: state });
     }
   });
   return page;
+}
+
+async function observe(tabId) {
+  const state = await readState();
+  const tab = await chrome.tabs.get(tabId);
+  if (
+    !state.profile.learning ||
+    !tab.active ||
+    !/^https?:\/\//.test(tab.url || "")
+  )
+    return { watching: false };
+  if (
+    !(await chrome.permissions.contains({
+      origins: [`${new URL(tab.url).origin}/*`],
+    }))
+  )
+    throw new Error("Site access is required for automatic refresh.");
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["page-observer.js"],
+  });
+  return { watching: true, url: tab.url };
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -128,10 +186,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     message.type === "READ"
       ? readState()
       : message.type === "SCAN"
-        ? scan(message.tabId)
-        : updateState(message);
+        ? scan(message.tabId, message.expectedUrl)
+        : message.type === "OBSERVE"
+          ? observe(message.tabId)
+          : updateState(message);
   task
     .then((data) => respond({ ok: true, data }))
-    .catch((error) => respond({ ok: false, error: error.message }));
+    .catch((error) =>
+      respond({ ok: false, error: error.message, code: error.code }),
+    );
   return true;
 });

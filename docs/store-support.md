@@ -7,8 +7,8 @@ Each subpart is implemented, verified, committed, and pushed separately.
 | 1.1  | First store, representative pages, reduced fixtures, acceptance criteria | Complete |
 | 1.2  | Reliable titles, images, prices, currencies, and product links           | Complete |
 | 1.3  | Colors, sizes, variants, and explicit availability                       | Complete |
-| 1.4  | Refresh after dynamic content and same-page navigation                   | Next     |
-| 1.5  | Second store using the same product contract and regression checks       | Planned  |
+| 1.4  | Refresh after dynamic content and same-page navigation                   | Complete |
+| 1.5  | Second store using the same product contract and regression checks       | Next     |
 
 ## First store: Everlane
 
@@ -54,6 +54,8 @@ Baseline reader observations from these live pages: the product scan returned 12
 Candidate pages inspected: <https://www.quince.com/women/linen-shirt?color=white> and <https://www.quince.com/shop/women/shirts-%26-blouses>. The baseline reader returned 60 size/color records on the product page and no products on the collection page. Quince support is not yet implemented.
 
 ## Fixture provenance and limits
+
+Part 1.4 verification: the native extension suite checks product-metadata mutations, History API navigation, newly appended collection cards, rejection of requests for an obsolete URL, one observer after a panel reload, cleanup when the active tab changes or the panel closes, and no browsing-memory rewrites for unchanged facts. Content observation is owned by a panel-to-tab port. Product changes are coalesced for 350 ms; a one-second location-only check covers History API changes without injecting code into the page's main world. Pausing, resetting, revoking access, and choosing demo mode disconnect the port. No manifest permissions were added. Implementation follows Chrome's [port messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging) and [tab connections](https://developer.chrome.com/docs/extensions/reference/api/tabs#method-connect).
 
 Part 1.3 live verification on November 1, 2026: the same Everlane product yielded 10 size variants in Light Blue; 9 sizes were explicitly marked available, while size 0 was marked unavailable. No selection was inferred when the live page had no checked size. Offline tests also cover unknown stock, exact variant URLs, stable identity across sizes, current-color ranking, and selected sold-out variants. The native panel test verifies the availability table and its exact store links.
 

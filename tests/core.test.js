@@ -11,6 +11,24 @@ import {
   money,
 } from "../extension/core.js";
 import { DEMO_PRODUCTS } from "../extension/demo.js";
+import { productSignature } from "../extension/core.js";
+test("refresh signatures ignore observation timestamps but include price and stock changes", () => {
+  const p = { id: "x", price: 88, variants: [{ available: true }] };
+  assert.equal(
+    productSignature({ ...p, capturedAt: 1, seenAt: 2 }),
+    productSignature({ ...p, capturedAt: 9, seenAt: 10 }),
+  );
+  assert.notEqual(productSignature(p), productSignature({ ...p, price: 89 }));
+  assert.equal(
+    productSignature(p),
+    productSignature({ variants: [{ available: true }], price: 88, id: "x" }),
+    "Storage key ordering does not change product facts",
+  );
+  assert.notEqual(
+    productSignature(p),
+    productSignature({ ...p, variants: [{ available: false }] }),
+  );
+});
 
 test("defaults do not share mutable memory and hydration keeps newly added defaults", () => {
   const a = freshState();
