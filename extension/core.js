@@ -140,7 +140,9 @@ export function rankProducts(products, state) {
         p.price != null &&
         p.currency === profile.currency &&
         p.price <= profile.budget;
+      const sizeStatus = sizeAvailability(p, profile.size);
       const sizeKnown =
+        sizeStatus !== "unavailable" &&
         profile.size &&
         (p.sizes || []).some(
           (s) => s.toLowerCase() === profile.size.toLowerCase(),
@@ -157,7 +159,13 @@ export function rankProducts(products, state) {
         reasons.push("Similar style to your saved pieces");
       if (withinBudget) reasons.push("Within your usual budget");
       if (sizeKnown)
-        reasons.push(`${profile.size} listed · check availability`);
+        reasons.push(
+          sizeStatus === "available"
+            ? `${profile.size} marked available · verify at store`
+            : `${profile.size} listed · check availability`,
+        );
+      if (sizeStatus === "unavailable")
+        reasons.push(`${profile.size} marked unavailable for this color`);
       if (!reasons.length)
         reasons.push(
           p.demo
@@ -167,6 +175,33 @@ export function rankProducts(products, state) {
       return { ...p, tags, score, reasons };
     })
     .sort((a, b) => b.score - a.score);
+}
+
+export function sizeAvailability(product, size) {
+  if (!size) return "unknown";
+  const color = product.selectedOptions?.color;
+  const variants = (product.variants || []).filter(
+    (v) =>
+      v.size?.toLowerCase() === size.toLowerCase() &&
+      (!color || !v.color || v.color === color),
+  );
+  if (variants.some((v) => v.available === true)) return "available";
+  if (variants.length && variants.every((v) => v.available === false))
+    return "unavailable";
+  return "unknown";
+}
+
+export function stockLabel(status) {
+  return (
+    {
+      in_stock: "In stock",
+      out_of_stock: "Sold out",
+      discontinued: "Discontinued",
+      preorder: "Preorder",
+      backorder: "Backorder",
+      limited: "Limited availability",
+    }[status] || "Unknown"
+  );
 }
 
 export function refineQuery(query, previous = {}, currency = "USD") {

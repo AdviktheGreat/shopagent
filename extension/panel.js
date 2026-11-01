@@ -7,6 +7,7 @@ import {
   filterLabels,
   money,
   safeUrl,
+  stockLabel,
 } from "./core.js";
 import { DEMO_PRODUCTS, garmentArt } from "./demo.js";
 
@@ -286,10 +287,18 @@ function details(id) {
   const sizes = p.sizes?.length
     ? p.sizes.join(" · ")
     : "Not captured from this page";
+  const selected = p.variants?.find((v) => v.id === p.selectedVariantId);
+  const selectedText = [p.selectedOptions?.color, p.selectedOptions?.size]
+    .filter(Boolean)
+    .join(" · ");
+  const variantTable = p.variants?.length
+    ? `<details class="variant-details"><summary>Size & color availability (${p.variants.length} options)</summary><div class="comparison-scroll"><table class="variant-table"><thead><tr><th scope="col">Color</th><th scope="col">Size</th><th scope="col">Stock</th><th scope="col">Store</th></tr></thead><tbody>${p.variants.map((v) => `<tr${v.id === p.selectedVariantId ? ' class="selected-variant"' : ""}><td>${esc(v.color || "Unlisted")}</td><td>${esc(v.size || "Unlisted")}</td><td>${esc(stockLabel(v.availability))}</td><td>${safeUrl(v.url) ? `<a href="${esc(safeUrl(v.url))}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc([v.color, v.size].filter(Boolean).join(" "))} at store">↗</a>` : "—"}</td></tr>`).join("")}</tbody></table></div></details>`
+    : "";
   openModal(
     "A closer look",
     `<img class="detail-image" src="${esc(image(p))}" alt="${esc(p.title)}" referrerpolicy="no-referrer"><p class="product-brand detail-brand">${esc(p.store)} · ${esc(sourceLabel(p))}</p><h3 class="detail-title">${esc(p.title)}</h3><p class="detail-price">${esc(priceLabel(p))}</p><p class="subtle">${esc(p.description || "No product description was captured.")}</p>
-    <dl><div class="evidence"><dt>Why this piece</dt><dd>${esc(ranked.reasons.join(". "))}.</dd></div><div class="evidence"><dt>Fabric</dt><dd>${esc(p.material || "Not captured from this page")}</dd></div><div class="evidence"><dt>Listed sizes</dt><dd>${esc(sizes)}</dd></div><div class="evidence"><dt>Stock</dt><dd>${esc(p.demo ? "Demo only" : p.availability ? p.availability.split("/").pop() : "Not captured · check the store")}</dd></div><div class="evidence"><dt>Reviews</dt><dd>${esc(p.rating ? `${p.rating.value} rating · ${p.rating.count || "Unknown number of"} ratings/reviews` : "No rating captured")}</dd></div></dl>
+    <dl><div class="evidence"><dt>Why this piece</dt><dd>${esc(ranked.reasons.join(". "))}.</dd></div><div class="evidence"><dt>Fabric</dt><dd>${esc(p.material || "Not captured from this page")}</dd></div><div class="evidence"><dt>Colors</dt><dd>${esc(p.colors?.join(" · ") || "Not captured from this page")}</dd></div><div class="evidence"><dt>Listed sizes</dt><dd>${esc(sizes)}</dd></div>${selectedText ? `<div class="evidence"><dt>Selected</dt><dd>${esc(selectedText)}</dd></div>` : ""}<div class="evidence"><dt>Stock</dt><dd>${esc(p.demo ? "Demo only" : selected ? stockLabel(selected.availability) : p.availability ? p.availability.split("/").pop() : "Not captured · check the store")}</dd></div><div class="evidence"><dt>Reviews</dt><dd>${esc(p.rating ? `${p.rating.value} rating · ${p.rating.count || "Unknown number of"} ratings/reviews` : "No rating captured")}</dd></div></dl>
+    ${variantTable}
     ${p.reviews?.length ? `<h3 class="subtle">Excerpts captured from product markup</h3>${p.reviews.map((review) => `<p class="review">${esc(review)}</p>`).join("")}` : ""}
     <p class="evidence-note">${p.demo ? "This is a fictional sample product with an illustration. The brand, price, fabric, and sizes are examples." : "These details are a snapshot of the page, not a fit or quality guarantee. Listed sizes may include unavailable variants. Check the retailer’s size chart, reviews, current price, and stock before buying."}</p>
     <div class="modal-actions"><button class="primary" data-save="${esc(p.id)}" data-detail-save="true">${saved ? "Remove from saved" : "♡ Save this piece"}</button>${!p.demo && safeUrl(p.url) ? `<a class="secondary" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">Open at store ↗</a>` : ""}</div>`,

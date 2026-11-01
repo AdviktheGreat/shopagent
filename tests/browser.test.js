@@ -238,6 +238,65 @@ try {
   passed(
     "Chrome itself blocks live page extraction before site permission is granted",
   );
+  await panel.evaluate(
+    async (origin) =>
+      chrome.runtime.sendMessage({
+        type: "SAVE",
+        product: {
+          id: "variant-evidence-fixture",
+          title: "Variant evidence fixture",
+          store: "Test store",
+          price: 88,
+          currency: "USD",
+          image: `${origin}/fixtures/blazer.svg`,
+          url: `${origin}/products/shirt?variant=0`,
+          sizes: ["00", "0"],
+          colors: ["Light Blue"],
+          selectedVariantId: "v0",
+          selectedOptions: { color: "Light Blue", size: "0" },
+          variants: [
+            {
+              id: "v00",
+              size: "00",
+              color: "Light Blue",
+              available: true,
+              availability: "in_stock",
+              url: `${origin}/products/shirt?variant=00`,
+            },
+            {
+              id: "v0",
+              size: "0",
+              color: "Light Blue",
+              available: false,
+              availability: "out_of_stock",
+              url: `${origin}/products/shirt?variant=0`,
+            },
+          ],
+        },
+      }),
+    origin,
+  );
+  await panel.reload();
+  await panel.getByRole("tab", { name: /^Saved/ }).click();
+  await panel
+    .locator('[data-detail="variant-evidence-fixture"]')
+    .first()
+    .click();
+  await panel.locator(".variant-details summary").click();
+  await expect(panel.locator(".variant-table tbody tr")).toHaveCount(2);
+  await expect(panel.locator(".selected-variant")).toContainText("Sold out");
+  await expect(panel.locator(".variant-table a").last()).toHaveAttribute(
+    "href",
+    `${origin}/products/shirt?variant=0`,
+  );
+  await panel.setViewportSize({ width: 400, height: 950 });
+  await panel.screenshot({
+    path: resolve(results, "shopagent-variant-details.png"),
+  });
+  await panel.locator("#close-modal").click();
+  passed(
+    "Product details show exact variant links and distinguish selected sold-out sizes",
+  );
   assert.deepEqual(errors, []);
   await context.close();
 

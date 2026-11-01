@@ -1,5 +1,6 @@
 (() => {
-  // Runs only when the panel asks Chrome to read a page. Never reads forms, cookies, or account data.
+  // Reads product markup and explicitly scoped product-option controls only.
+  // Never reads cookies, account, address, or payment fields.
   const clean = (value, limit = 1200) =>
     String(value ?? "")
       .replace(/\s+/g, " ")
@@ -99,6 +100,33 @@
         ? product.currency
         : "",
       material: clean(product.material, 300),
+      colors: []
+        .concat(product.colors || [])
+        .map((color) => clean(color, 80))
+        .filter(Boolean)
+        .slice(0, 40),
+      selectedOptions: {
+        color: clean(product.selectedOptions?.color, 80),
+        size: clean(product.selectedOptions?.size, 40),
+      },
+      selectedVariantId: clean(product.selectedVariantId, 240),
+      variants: []
+        .concat(product.variants || [])
+        .slice(0, 120)
+        .map((v) => ({
+          id: clean(v.id, 240),
+          sku: clean(v.sku, 120),
+          color: clean(v.color, 80),
+          size: clean(v.size, 40),
+          url: url(v.url),
+          image: imageUrl(v.image),
+          price: parsePrice(v.price),
+          currency: /^[A-Z]{3}$/.test(v.currency || "") ? v.currency : "",
+          available:
+            v.available === true ? true : v.available === false ? false : null,
+          availability: clean(v.availability, 40),
+          evidence: clean(v.evidence, 100),
+        })),
       sizes: [
         ...new Set(
           (product.sizes || [])

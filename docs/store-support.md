@@ -6,8 +6,8 @@ Each subpart is implemented, verified, committed, and pushed separately.
 | ---- | ------------------------------------------------------------------------ | -------- |
 | 1.1  | First store, representative pages, reduced fixtures, acceptance criteria | Complete |
 | 1.2  | Reliable titles, images, prices, currencies, and product links           | Complete |
-| 1.3  | Colors, sizes, variants, and explicit availability                       | Next     |
-| 1.4  | Refresh after dynamic content and same-page navigation                   | Planned  |
+| 1.3  | Colors, sizes, variants, and explicit availability                       | Complete |
+| 1.4  | Refresh after dynamic content and same-page navigation                   | Next     |
 | 1.5  | Second store using the same product contract and regression checks       | Planned  |
 
 ## First store: Everlane
@@ -54,6 +54,8 @@ Baseline reader observations from these live pages: the product scan returned 12
 Candidate pages inspected: <https://www.quince.com/women/linen-shirt?color=white> and <https://www.quince.com/shop/women/shirts-%26-blouses>. The baseline reader returned 60 size/color records on the product page and no products on the collection page. Quince support is not yet implemented.
 
 ## Fixture provenance and limits
+
+Part 1.3 live verification on November 1, 2026: the same Everlane product yielded 10 size variants in Light Blue; 9 sizes were explicitly marked available, while size 0 was marked unavailable. No selection was inferred when the live page had no checked size. Offline tests also cover unknown stock, exact variant URLs, stable identity across sizes, current-color ranking, and selected sold-out variants. The native panel test verifies the availability table and its exact store links.
 
 Part 1.2 live verification on November 1, 2026: the Everlane product page returned one grouped product with a primary image, price 88, and explicit USD currency. Its collection returned 52 unique cards; the first card carried its displayed price 98 and explicit USD currency. These are dated verification observations, not current inventory promises. `npm run test:stores` replays reduced fixtures offline and checks grouping, sale-price selection, hidden cards, missing currencies, malformed JSON-LD fallback, and private-field exclusion. The native extension browser suite also passed after adding the adapter pipeline.
 

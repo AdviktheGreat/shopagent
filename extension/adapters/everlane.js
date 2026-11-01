@@ -2,7 +2,9 @@
   globalThis.ShopagentAdapters ||= {};
   globalThis.ShopagentAdapters.everlane = (context) => {
     if (!/^(www\.)?everlane\.com$/.test(location.hostname)) return null;
-    const { nodes, clean, url, meta, parsePrice, add } = context;
+    const { nodes, clean, url, meta, parsePrice, add, scalar } = context;
+    const { normalizeAvailability, summarize } =
+      globalThis.ShopagentVariantEvidence;
     const identity = (value) => {
       const safe = url(value);
       if (!safe) return "";
@@ -45,25 +47,95 @@
       const amount = prices.length
         ? Math.min(...prices)
         : parsePrice(meta("og:price:amount"));
+      // Deliberately scoped to product size controls, never generic input fields.
+      const productRoot = document.querySelector("main product-info");
+      const controls = [
+        ...(productRoot?.querySelectorAll(
+          'variant-selects input[data-option-name="Size"]',
+        ) || []),
+      ];
+      const color = clean(
+        scalar(group.color) || String(group.name || "").split(" | ")[1],
+        80,
+      );
+      const variants = children.slice(0, 120).map((child) => {
+        const offer =
+          []
+            .concat(child.offers || [])
+            .find((o) => o && typeof o === "object") || {};
+        const namedSize = String(child.name || "")
+          .split(" - ")
+          .at(-1);
+        const size = clean(
+          scalar(child.size) ||
+            (controls.some((c) => c.value === namedSize) ? namedSize : ""),
+          40,
+        );
+        const control = controls.find((c) => c.value === size);
+        const label = [...(control?.labels || [])].find((label) =>
+          productRoot.contains(label),
+        );
+        let stock = normalizeAvailability(offer.availability);
+        if (label?.dataset.available === "false")
+          stock = { availability: "out_of_stock", available: false };
+        else if (
+          label?.dataset.available === "true" &&
+          stock.available !== true
+        )
+          stock = { availability: "in_stock", available: true };
+        return {
+          id: clean(
+            child.sku || url(offer.url || child.url || child["@id"]),
+            240,
+          ),
+          sku: clean(child.sku, 120),
+          size,
+          color: clean(scalar(child.color) || color, 80),
+          url: url(offer.url || child.url || child["@id"]),
+          image: child.image,
+          price: parsePrice(offer.price),
+          currency: offer.priceCurrency || "",
+          ...stock,
+          evidence: label?.hasAttribute("data-available")
+            ? "product option and offer markup"
+            : "offer markup",
+        };
+      });
+      const queryVariant = new URL(location.href).searchParams.get("variant");
+      const checkedSize = controls.find((c) => c.checked)?.value || "";
+      const selected =
+        variants.find(
+          (v) =>
+            queryVariant &&
+            v.url &&
+            new URL(v.url).searchParams.get("variant") === queryVariant,
+        ) || variants.find((v) => checkedSize && v.size === checkedSize);
+      const evidence = summarize(variants, color);
       add({
         id: identity(group.url || group["@id"]),
         title: group.name || meta("og:title"),
-        url: identity(group.url || group["@id"]),
+        url: selected?.url || identity(group.url || group["@id"]),
         image:
           group.image ||
           children.find((child) => child.image)?.image ||
           meta("og:image:secure_url") ||
           meta("og:image"),
-        price: amount,
-        currency:
-          currencies.length === 1 ? currencies[0] : meta("og:price:currency"),
+        price: selected ? selected.price : amount,
+        currency: selected
+          ? selected.currency
+          : currencies.length === 1
+            ? currencies[0]
+            : meta("og:price:currency"),
         priceFrom:
-          prices.some((price) => price !== amount) ||
-          offers.some((offer) => offer.lowPrice != null),
+          !selected &&
+          (prices.some((price) => price !== amount) ||
+            offers.some((offer) => offer.lowPrice != null)),
         brand: clean(group.brand?.name || group.brand, 80),
         description: group.description || "",
         material: group.material || "",
-        sizes: [],
+        ...evidence,
+        selectedVariantId: selected?.id || "",
+        selectedOptions: { color, size: selected?.size || "" },
         source: "Everlane product markup",
       });
       return { handled: true, adapter: "everlane", pageType: "product" };

@@ -50,7 +50,7 @@ Chrome extensions are packaged HTML, CSS, and JavaScript described by `manifest.
 
 - **`extension/panel.html`, `panel.css`, `panel.js`**: the side panel interface. It stays open while you browse, manages user actions, and asks the background worker to scan or update memory.
 - **`extension/background.js`**: Chrome's event-driven service worker. It handles storage changes through a serialized queue and injects the page reader after permission is granted. Durable state lives in `chrome.storage.local`, so the service worker can shut down without losing it.
-- **`extension/extractor.js`**: a one-shot content script in Chrome's isolated world. Reads product markup and common visible product cards. It does not collect input fields, cookies, login information, or full page bodies.
+- **`extension/extractor.js`** and **`extension/adapters/`**: content scripts in Chrome's isolated world. Read product markup, common visible product cards, and explicitly identified product-option controls. They do not collect arbitrary inputs, cookies, login information, address/payment fields, or full page bodies.
 - **`extension/core.js`**: pure ranking, filter parsing, URL validation, and data helpers. This is the natural boundary for adding a real recommendation service later.
 - **`extension/demo.js`**: fictional sample products and self-contained garment illustrations.
 
@@ -70,13 +70,15 @@ Data is bounded to 100 saves, 150 remembered products, 60 conversation messages,
 
 ### Product facts have limits
 
+Everlane product details include captured color/size combinations, stock evidence, selected options when present, and exact variant links. A usual size known to be sold out no longer receives a size-match ranking boost. Missing stock evidence stays unknown; preorders and backorders are labeled separately from immediate stock.
+
 The reader never invents a missing price, currency, fabric, review, or size. A strict budget excludes prices in a different or unknown currency; there is no currency conversion. A bare `$` in a collection card is ambiguous and is not assumed to mean USD. Aggregate offers show **From** prices; confirm the specific variant's price with the retailer.
 
 Size lists may include unavailable variants. Matching your usual size only highlights a listed option; it does not predict fit. Fabric filters look for named materials and do not establish quality. “For work” and “More fitted” use text cues, which can be incomplete. Product evidence is a snapshot, so always confirm the current price, size, and stock with the retailer.
 
 ## Development and verification
 
-Node 20+ is only needed for development. The runtime extension has no build step.
+Node 20.11+ is only needed for development. The runtime extension has no build step.
 
 ```sh
 npm ci

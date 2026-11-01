@@ -81,6 +81,45 @@ try {
       assert.equal((await page.evaluate(source)).products[0].priceFrom, true);
     }
     if (entry.id === "everlane-product") {
+      assert.deepEqual(first.sizes, ["00", "0"]);
+      assert.deepEqual(first.availableSizes, ["00"]);
+      assert.deepEqual(first.colors, ["Light Blue"]);
+      assert.equal(first.variants[1].available, false);
+      assert.equal(first.selectedOptions.size, "00");
+      assert.ok(first.url.includes("variant=42242838429782"));
+      await page.goto(`${entry.url}?variant=42242838462550`, {
+        waitUntil: "domcontentloaded",
+      });
+      const selected = (await page.evaluate(source)).products[0];
+      assert.equal(
+        selected.id,
+        first.id,
+        "Product identity is stable across size variants",
+      );
+      assert.equal(selected.selectedOptions.size, "0");
+      assert.equal(
+        selected.variants.find((v) => v.id === selected.selectedVariantId)
+          .available,
+        false,
+      );
+      assert.ok(selected.url.includes("variant=42242838462550"));
+      await page.evaluate(() => {
+        document
+          .querySelectorAll("label[data-available]")
+          .forEach((label) => label.removeAttribute("data-available"));
+        const script = document.querySelector(
+          'script[type="application/ld+json"]',
+        );
+        const group = JSON.parse(script.textContent);
+        group.hasVariant.forEach((v) => delete v.offers.availability);
+        script.textContent = JSON.stringify(group);
+      });
+      assert.ok(
+        (await page.evaluate(source)).products[0].variants.every(
+          (v) => v.available === null,
+        ),
+        "Missing stock evidence stays unknown",
+      );
       await page.evaluate(() => {
         document.querySelector(
           'script[type="application/ld+json"]',

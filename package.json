@@ -5,7 +5,7 @@
   "type": "module",
   "description": "A local-first personal shopper Chrome extension prototype",
   "scripts": {
-    "test": "node --test tests/core.test.js",
+    "test": "node --test tests/core.test.js tests/variants.test.js",
     "test:browser": "node tests/browser.test.js",
     "test:stores": "node tests/stores.test.js",
     "check": "node scripts/check.js",
