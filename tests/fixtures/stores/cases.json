@@ -25,6 +25,30 @@
         "currency": "USD",
         "imageRequired": true
       }
+    },
+    {
+      "id": "quince-product",
+      "url": "https://www.quince.com/women/linen-shirt?color=white",
+      "fixture": "quince/product.html",
+      "expected": {
+        "count": 1,
+        "title": "100% European Linen Shirt in White",
+        "price": 42,
+        "currency": "USD",
+        "imageRequired": true
+      }
+    },
+    {
+      "id": "quince-collection",
+      "url": "https://www.quince.com/shop/women/shirts-%26-blouses",
+      "fixture": "quince/collection.html",
+      "expected": {
+        "count": 2,
+        "title": "White Organic Cotton Relaxed Oxford Shirt",
+        "price": 39.9,
+        "currency": "USD",
+        "imageRequired": true
+      }
     }
   ]
 }

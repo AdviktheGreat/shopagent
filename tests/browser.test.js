@@ -300,14 +300,18 @@ try {
   assert.deepEqual(errors, []);
   await context.close();
 
-  // Integration fixture: pre-grant only our loopback fixture origin in a temporary copy.
+  // Integration fixture: pre-grant the loopback origin and two fully mocked store origins.
   // Production manifest above is tested unchanged; no broad permissions are added to the deliverable.
   const temporary = await mkdtemp(join(tmpdir(), "shopagent-extension-"));
   cleanups.push(() => rm(temporary, { recursive: true, force: true }));
   await cp(resolve(root, "extension"), temporary, { recursive: true });
   const fixtureManifest = {
     ...manifest,
-    host_permissions: ["http://127.0.0.1/*"],
+    host_permissions: [
+      "http://127.0.0.1/*",
+      "https://www.everlane.com/*",
+      "https://www.quince.com/*",
+    ],
   };
   delete fixtureManifest.key;
   await writeFile(
@@ -315,6 +319,23 @@ try {
     JSON.stringify(fixtureManifest),
   );
   const integration = await launch(temporary);
+  for (const [host, fixture] of [
+    ["www.everlane.com", "everlane/product.html"],
+    ["www.quince.com", "quince/product.html"],
+  ]) {
+    const body = await readFile(
+      resolve(root, "tests/fixtures/stores", fixture),
+      "utf8",
+    );
+    await integration.context.route(`https://${host}/**`, (route) =>
+      route.request().isNavigationRequest()
+        ? route.fulfill({ contentType: "text/html", body })
+        : route.abort(),
+    );
+  }
+  await integration.context.route("https://images.quince.com/**", (route) =>
+    route.abort(),
+  );
   const livePanel = await integration.context.newPage();
   const liveErrors = [];
   livePanel.on("pageerror", (error) => liveErrors.push(error.message));
@@ -440,6 +461,52 @@ try {
     "Switching away and leaving the panel disconnect observers; returning attaches exactly once",
   );
 
+  await livePanel.locator("#chat-input").fill("Under 100");
+  await livePanel
+    .locator("#chat-form")
+    .evaluate((form) => form.requestSubmit());
+  await integration.worker.evaluate(
+    (id) =>
+      chrome.tabs.update(id, {
+        url: "https://www.everlane.com/products/womens-relaxed-linen-shirt-light-blue",
+      }),
+    liveTab,
+  );
+  await expect(livePanel.locator("#store-name")).toHaveText("Everlane");
+  await expect(livePanel.locator(".product-card")).toHaveCount(1);
+  await livePanel.locator(".save-button").click();
+  await integration.worker.evaluate(
+    (id) =>
+      chrome.tabs.update(id, {
+        url: "https://www.quince.com/women/linen-shirt?color=white",
+      }),
+    liveTab,
+  );
+  await expect(livePanel.locator("#store-name")).toHaveText("Quince");
+  await expect(livePanel.locator(".product-card")).toHaveCount(1);
+  await expect(
+    livePanel.locator('[data-remove-filter="maxPrice"]'),
+  ).toContainText("$100");
+  await livePanel.locator(".save-button").click();
+  await livePanel.getByRole("tab", { name: /^Saved/ }).click();
+  await expect(livePanel.locator(".product-card")).toHaveCount(3);
+  await livePanel
+    .locator(
+      '[data-compare-select="https://www.everlane.com/products/womens-relaxed-linen-shirt-light-blue"]',
+    )
+    .check();
+  await livePanel
+    .locator('[data-compare-select="https://www.quince.com/women/linen-shirt"]')
+    .check();
+  await livePanel.getByRole("button", { name: "Compare pieces" }).click();
+  await expect(livePanel.locator(".comparison")).toContainText("Everlane");
+  await expect(livePanel.locator(".comparison")).toContainText("Quince");
+  await livePanel.locator("#close-modal").click();
+  passed(
+    "Native store adapters share filters and saved comparisons across Everlane and Quince",
+  );
+  await livePanel.getByRole("tab", { name: "For you" }).click();
+
   await integration.worker.evaluate(
     async (tabId) => chrome.tabs.update(tabId, { url: "https://example.org/" }),
     liveTab,
@@ -449,7 +516,7 @@ try {
     "allow access",
   );
   await livePanel.getByRole("tab", { name: /^Saved/ }).click();
-  await expect(livePanel.locator(".product-card")).toHaveCount(1);
+  await expect(livePanel.locator(".product-card")).toHaveCount(3);
   passed(
     "Moving to an unauthorized store clears stale picks and keeps the cross-store shortlist",
   );
@@ -466,11 +533,13 @@ try {
       chrome.tabs.update(id, { url: `${origin}/fixtures/collection.html` }),
     { id: liveTab, origin },
   );
+  await storefront.waitForURL(`${origin}/fixtures/collection.html`);
+  await expect(storefront.locator(".product-card")).toHaveCount(3);
   const direct = await livePanel.evaluate(
     (tabId) => chrome.runtime.sendMessage({ type: "SCAN", tabId }),
     liveTab,
   );
-  assert.equal(direct.ok, true);
+  assert.equal(direct.ok, true, direct.error);
   await expect.poll(observerCount).toBe(0);
   assert.equal(
     await integration.worker.evaluate(

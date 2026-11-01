@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <title>Women's Shirts &amp; Blouses</title>
+    <!-- Only the public market identifier consumed by the adapter is retained. -->
+    <script id="__NEXT_DATA__" type="application/json">
+      { "locale": "en-us", "props": { "pageProps": { "locale": "en-us" } } }
+    </script>
+  </head>
+  <body>
+    <header>
+      <a href="/shop/women/shirts-%26-blouses"
+        ><img alt="Category" src="/category.jpg"
+      /></a>
+    </header>
+    <main>
+      <h1>Women's Shirts &amp; Blouses</h1>
+      <article
+        data-testid="product-card"
+        data-slot="product-tile"
+        data-slug="women/organic-cotton-relaxed-oxford-shirt"
+      >
+        <div data-slot="product-tile-image-primary">
+          <img
+            src="https://images.quince.com/5plDBwgEtEYfIfgsnCPaEM/ab5be3f603a787e53320f7fec20fcedb/Pre_Spring_Lookbook_01_168_EDITED.jpg"
+            alt="Organic Cotton Relaxed Oxford Shirt"
+          />
+        </div>
+        <div data-testid="product-card-title">
+          <h2>
+            <a href="/women/organic-cotton-relaxed-oxford-shirt?color=white"
+              >White Organic Cotton Relaxed Oxford Shirt</a
+            >
+          </h2>
+        </div>
+        <div data-testid="product-card-price"><span>$39.90</span></div>
+      </article>
+      <!-- Synthetic sale edge case using the observed card structure. -->
+      <article data-testid="product-card">
+        <div data-slot="product-tile-image-primary">
+          <img
+            src="https://images.quince.com/fixture-shirt.jpg"
+            alt="Sale fixture"
+          />
+        </div>
+        <div data-testid="product-card-title">
+          <h2>
+            <a href="/women/synthetic-sale-shirt?color=black">Sale fixture</a>
+          </h2>
+        </div>
+        <div data-testid="product-card-price">
+          <s>$80.00</s><span>$42.00</span>
+        </div>
+      </article>
+      <article data-testid="product-card" hidden>
+        <img src="/hidden.jpg" alt="Hidden" />
+        <div data-testid="product-card-title">
+          <h2><a href="/women/hidden">Hidden</a></h2>
+        </div>
+        <div data-testid="product-card-price">$1</div>
+      </article>
+    </main>
+  </body>
+</html>

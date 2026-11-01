@@ -92,7 +92,7 @@
       id: url(product.id) || href,
       url: href,
       title,
-      store,
+      store: clean(product.store || store, 100),
       image: imageUrl(product.image),
       description: stripHtml(product.description),
       price: parsePrice(product.price),

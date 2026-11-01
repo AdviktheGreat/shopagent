@@ -3,5 +3,6 @@
 export const EXTRACTION_FILES = [
   "variant-evidence.js",
   "adapters/everlane.js",
+  "adapters/quince.js",
   "extractor.js",
 ];

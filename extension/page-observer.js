@@ -5,7 +5,7 @@
   let observer, timer, urlTimer;
   let lastUrl = location.href;
   const relevant =
-    'script[type="application/ld+json"],meta[property^="og:"],meta[property^="product:"],product-info,variant-selects,.blm-product-search__result,.product-card,.product-item,.product-tile,[data-testid="product-card"],[data-testid="product-form"],[itemprop="price"],main h1,main .price';
+    'script[type="application/ld+json"],script#__NEXT_DATA__[type="application/json"],meta[property^="og:"],meta[property^="product:"],product-info,variant-selects,.blm-product-search__result,.product-card,.product-item,.product-tile,[data-testid="product-card"],[data-testid="product-form"],[itemprop="price"],main h1,main .price';
   const element = (node) =>
     node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
   const concernsProducts = (node) => {

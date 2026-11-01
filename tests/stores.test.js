@@ -47,7 +47,7 @@ try {
       );
     assert.ok(first.image.startsWith("https://"), `${entry.id}: primary image`);
     assert.ok(
-      first.url.startsWith("https://www.everlane.com/products/"),
+      new URL(first.url).origin === new URL(entry.url).origin,
       `${entry.id}: absolute product URL`,
     );
     assert.equal(
@@ -141,6 +141,60 @@ try {
       const missing = await page.evaluate(source);
       assert.equal(missing.products[0].price, null);
       assert.equal(missing.products[0].currency, "");
+    }
+    if (entry.id === "quince-product") {
+      assert.equal(first.variants.length, 3);
+      assert.equal(
+        first.selectedOptions.size,
+        "",
+        "Metadata default size is not a user-selected size",
+      );
+      assert.deepEqual(first.availableSizes, ["XS"]);
+      await page.goto(`${entry.url}&size=s`, { waitUntil: "domcontentloaded" });
+      const selected = (await page.evaluate(source)).products[0];
+      assert.equal(selected.id, first.id);
+      assert.equal(selected.selectedOptions.size, "S");
+      assert.equal(
+        selected.variants.find((v) => v.id === selected.selectedVariantId)
+          .available,
+        false,
+      );
+      await page.goto(
+        "https://www.quince.com/women/linen-shirt?color=blue-pinstripe",
+        { waitUntil: "domcontentloaded" },
+      );
+      const blue = (await page.evaluate(source)).products[0];
+      assert.equal(blue.selectedOptions.color, "Blue Pinstripe");
+      assert.ok(blue.image.includes("W-BLO-33-BPIN"));
+      assert.ok(blue.title.includes("Blue Pinstripe"));
+    }
+    if (entry.id === "quince-collection") {
+      assert.equal(
+        result.products[1].price,
+        42,
+        "Sale price excludes struck-through traditional retail",
+      );
+      assert.equal(
+        first.currencySource,
+        "Verified Quince en-us market mapping",
+      );
+      await page.evaluate(() => {
+        document.querySelector("#__NEXT_DATA__").textContent = JSON.stringify({
+          locale: "en-ca",
+        });
+      });
+      assert.equal(
+        (await page.evaluate(source)).products[0].currency,
+        "",
+        "Unverified locales do not inherit USD",
+      );
+      await page.evaluate(() => {
+        document.querySelector('[data-testid="product-card-price"]').innerHTML =
+          '<data data-currency="CAD" value="54.90">$54.90</data>';
+      });
+      const explicit = (await page.evaluate(source)).products[0];
+      assert.equal(explicit.currency, "CAD");
+      assert.equal(explicit.price, 54.9);
     }
     console.log(
       `✓ ${entry.id}: grouped identity, title, image, price, currency, links, and private-field exclusion`,

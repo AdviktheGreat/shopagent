@@ -8,7 +8,7 @@ Each subpart is implemented, verified, committed, and pushed separately.
 | 1.2  | Reliable titles, images, prices, currencies, and product links           | Complete |
 | 1.3  | Colors, sizes, variants, and explicit availability                       | Complete |
 | 1.4  | Refresh after dynamic content and same-page navigation                   | Complete |
-| 1.5  | Second store using the same product contract and regression checks       | Next     |
+| 1.5  | Second store using the same product contract and regression checks       | Complete |
 
 ## First store: Everlane
 
@@ -51,9 +51,13 @@ Baseline reader observations from these live pages: the product scan returned 12
 - Add Quince using its public product-group markup and product-card selectors, with the same normalized fields and optional-per-store permission flow.
 - Validate public product and collection pages live; add reduced offline fixtures and edge cases. Preserve Everlane and generic-reader coverage.
 
-Candidate pages inspected: <https://www.quince.com/women/linen-shirt?color=white> and <https://www.quince.com/shop/women/shirts-%26-blouses>. The baseline reader returned 60 size/color records on the product page and no products on the collection page. Quince support is not yet implemented.
+Validated pages: <https://www.quince.com/women/linen-shirt?color=white> and <https://www.quince.com/shop/women/shirts-%26-blouses>. The original reader returned 60 size/color records on the product page and no products on the collection page. The dedicated adapter now groups the product and reads Quince's `data-testid` collection cards.
+
+Quince product offers explicitly identify USD on the tested US storefront. Collection cards show a dollar sign without an ISO code; their public Next.js payload identifies the market as `en-us`. The adapter uses a deliberately limited `en-us` to USD market mapping, records `currencySource`, and discloses it in product details. No other locale is mapped. An explicit currency in a card overrides this mapping. Only the public locale field is extracted from `__NEXT_DATA__`; no account, experimentation, tracking, or cart data is retained. This is a verified adapter configuration, not an assumption based on `$` or the shopper's language.
 
 ## Fixture provenance and limits
+
+Part 1.5 live verification on November 1, 2026: Quince's product page returned one grouped piece with 70 color/size variants, a primary image, price 42, explicit USD offer currency, and five available sizes for White. Its collection returned 30 cards from the loaded page; the first had price 39.90 and the verified US-market USD mapping. These are dated observations, not current inventory promises. Offline cases cover color changes, selected sold-out sizes, hidden cards, sale prices, unsupported locales, and explicit currency overrides. Native extension checks navigate between fully mocked Everlane and Quince origins and verify shared filters, saves, comparison, and cleanup alongside the existing generic-reader coverage.
 
 Part 1.4 verification: the native extension suite checks product-metadata mutations, History API navigation, newly appended collection cards, rejection of requests for an obsolete URL, one observer after a panel reload, cleanup when the active tab changes or the panel closes, and no browsing-memory rewrites for unchanged facts. Content observation is owned by a panel-to-tab port. Product changes are coalesced for 350 ms; a one-second location-only check covers History API changes without injecting code into the page's main world. Pausing, resetting, revoking access, and choosing demo mode disconnect the port. No manifest permissions were added. Implementation follows Chrome's [port messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging) and [tab connections](https://developer.chrome.com/docs/extensions/reference/api/tabs#method-connect).
 

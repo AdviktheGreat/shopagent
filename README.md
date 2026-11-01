@@ -26,7 +26,7 @@ The general reader works best on product pages with Schema.org Product JSON-LD o
 
 If nothing appears, try a product detail page, scroll to load the collection, then click **Refresh picks**. If needed, reload the extension and the store page. Chrome internal pages, the Chrome Web Store, and some protected pages cannot be read.
 
-Everlane now has a dedicated reader for product-group pages and its current collection cards. Sizes are grouped into one piece, and collection cards use their explicit storefront currency. See [store support and validation](docs/store-support.md) for scope and captured test pages. Other stores continue through the generic reader.
+Everlane and Quince have dedicated readers for their tested product and collection pages. Product variants are grouped into one piece, with captured color/size stock evidence and exact variant links. Everlane collection currency comes from its localization selector; Quince's tested `en-us` market uses a documented USD mapping verified against its product offers. Other Quince locales stay unknown without an explicit currency code. See [store support and validation](docs/store-support.md) for scope and dated live checks. Other stores continue through the generic reader.
 
 ## What works in this prototype
 
@@ -73,7 +73,7 @@ Data is bounded to 100 saves, 150 remembered products, 60 conversation messages,
 
 Everlane product details include captured color/size combinations, stock evidence, selected options when present, and exact variant links. A usual size known to be sold out no longer receives a size-match ranking boost. Missing stock evidence stays unknown; preorders and backorders are labeled separately from immediate stock.
 
-The reader never invents a missing price, currency, fabric, review, or size. A strict budget excludes prices in a different or unknown currency; there is no currency conversion. A bare `$` in a collection card is ambiguous and is not assumed to mean USD. Aggregate offers show **From** prices; confirm the specific variant's price with the retailer.
+The reader never invents a missing price, fabric, review, or size. Currency comes from explicit product/storefront markup or a documented, verified store-market mapping; a bare `$` alone is insufficient. A strict budget excludes prices in a different or unknown currency; there is no currency conversion. Quince collection cards use USD only for its verified `en-us` market, and the detail view discloses that mapping. Aggregate offers show **From** prices; confirm the specific variant's price and currency with the retailer.
 
 Size lists may include unavailable variants. Matching your usual size only highlights a listed option; it does not predict fit. Fabric filters look for named materials and do not establish quality. “For work” and “More fitted” use text cues, which can be incomplete. Product evidence is a snapshot, so always confirm the current price, size, and stock with the retailer.
 
@@ -92,7 +92,7 @@ npm run test:browser
 
 `npm test` verifies filter memory, currency handling, ranking, URL safety, and data bounds. `npm run check` checks Manifest V3 entrypoints, syntax, and basic CSP requirements.
 
-Browser checks launch Chromium in an isolated temporary profile, load the actual extension, and exercise profile persistence, filtering, saved comparisons, inspiration upload, compact layout, extraction, and permission denial. A second temporary copy pre-grants access **only to the loopback fixture origin** to test native content-script injection, tab following, safe rendering, and local data reset. The production manifest remains unchanged. Screenshots are written to `test-results/`. No personal browser profile is used.
+Browser checks launch Chromium in an isolated temporary profile, load the actual extension, and exercise profile persistence, filtering, saved comparisons, inspiration upload, compact layout, extraction, and permission denial. A second temporary copy grants only the loopback fixture origin and fully mocked Everlane/Quince origins to test native extraction, dynamic updates, observer cleanup, cross-store filters/comparisons, safe rendering, and reset. The production manifest remains unchanged and has no mandatory host permissions. `npm run test:stores` also replays reduced retailer fixtures without network requests. Screenshots are written to `test-results/`. No personal browser profile is used.
 
 If your Chromium executable is elsewhere, set `SHOPAGENT_CHROMIUM` to its path when running browser tests.
 
@@ -108,7 +108,7 @@ After changing extension files, return to `chrome://extensions`, click Shopagent
 
 ## Next capabilities
 
-1. Store-specific adapters and robust variant/size availability.
+1. Expand tested stores and locale/variant coverage beyond Everlane and Quince.
 2. A backend-mediated model connection for broader chat, with keys kept off the extension.
 3. Image similarity and explicit learning from inspiration.
 4. Retailer catalog ingestion and cross-store discovery beyond visited pages.
