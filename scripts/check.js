@@ -2,6 +2,7 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { EXTRACTION_FILES } from "../extension/reader-files.js";
 const root = resolve(import.meta.dirname, "..");
 const extension = resolve(root, "extension");
 const manifest = JSON.parse(
@@ -17,7 +18,12 @@ for (const file of [
   assert.ok(existsSync(resolve(extension, file)), `${file} is missing`);
 for (const file of Object.values(manifest.icons || {}))
   assert.ok(existsSync(resolve(extension, file)), `${file} is missing`);
-for (const file of readdirSync(extension).filter((f) => f.endsWith(".js"))) {
+const scripts = readdirSync(extension, { recursive: true }).filter((f) =>
+  f.endsWith(".js"),
+);
+for (const file of EXTRACTION_FILES)
+  assert.ok(existsSync(resolve(extension, file)), `${file} is missing`);
+for (const file of scripts) {
   const result = spawnSync(
     process.execPath,
     ["--check", resolve(extension, file)],

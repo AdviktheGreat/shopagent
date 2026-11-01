@@ -26,6 +26,8 @@ The general reader works best on product pages with Schema.org Product JSON-LD o
 
 If nothing appears, try a product detail page, scroll to load the collection, then click **Refresh picks**. If needed, reload the extension and the store page. Chrome internal pages, the Chrome Web Store, and some protected pages cannot be read.
 
+Everlane now has a dedicated reader for product-group pages and its current collection cards. Sizes are grouped into one piece, and collection cards use their explicit storefront currency. See [store support and validation](docs/store-support.md) for scope and captured test pages. Other stores continue through the generic reader.
+
 ## What works in this prototype
 
 | Feature            | Current behavior                                                                                                                            |
@@ -80,6 +82,7 @@ Node 20+ is only needed for development. The runtime extension has no build step
 npm ci
 npm test
 npm run check
+npm run test:stores
 npx playwright install chromium
 npm run test:browser
 ```

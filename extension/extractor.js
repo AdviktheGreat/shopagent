@@ -88,7 +88,7 @@
     if (!title || !href || products.size >= 60) return;
     const normalized = {
       ...product,
-      id: href,
+      id: url(product.id) || href,
       url: href,
       title,
       store,
@@ -116,6 +116,28 @@
     )
       products.set(href, normalized);
   };
+  const pageResult = (details = {}) => ({
+    store,
+    url: url(location.href),
+    title: clean(document.title, 180),
+    products: [...products.values()],
+    scannedAt: Date.now(),
+    ...details,
+  });
+  for (const adapter of Object.values(globalThis.ShopagentAdapters || {})) {
+    const result = adapter({
+      nodes,
+      clean,
+      stripHtml,
+      url,
+      meta,
+      parsePrice,
+      imageUrl,
+      scalar,
+      add,
+    });
+    if (result?.handled) return pageResult(result);
+  }
   for (const node of nodes) {
     const types = []
       .concat(node["@type"] || [])

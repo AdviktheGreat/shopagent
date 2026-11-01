@@ -1,4 +1,5 @@
 import { freshState, hydrateState, mergeProducts } from "./core.js";
+import { EXTRACTION_FILES } from "./reader-files.js";
 
 let queue = Promise.resolve();
 function serial(task) {
@@ -81,7 +82,7 @@ async function scan(tabId) {
     );
   const results = await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["extractor.js"],
+    files: EXTRACTION_FILES,
   });
   const page = results[0]?.result;
   if (!page)

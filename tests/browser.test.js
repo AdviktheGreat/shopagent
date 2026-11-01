@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import assert from "node:assert/strict";
 import { previewServer } from "../scripts/preview.js";
+import { EXTRACTION_FILES } from "../extension/reader-files.js";
 
 const root = resolve(import.meta.dirname, "..");
 const results = resolve(root, "test-results");
@@ -14,10 +15,13 @@ await new Promise((yes, no) => {
   server.listen(0, "127.0.0.1", yes);
 });
 const origin = `http://127.0.0.1:${server.address().port}`;
-const extractionScript = await readFile(
-  resolve(root, "extension/extractor.js"),
-  "utf8",
-);
+const extractionScript = (
+  await Promise.all(
+    EXTRACTION_FILES.map((file) =>
+      readFile(resolve(root, "extension", file), "utf8"),
+    ),
+  )
+).join("\n");
 const cleanups = [];
 let checks = 0;
 function passed(name) {
